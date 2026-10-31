@@ -1,0 +1,124 @@
+#!/bin/sh
+#
+# chkconfig: - 86 14
+# processname: inotify_file_d
+# description: Inotify_file daemon
+# config: /etc/inotify_file_d.conf
+#
+# /etc/init.d/inotify_file_d
+# pidfile: /var/run/inotify_file_d.pid
+# lockfile: /var/lock/subsys/inotify_file_d
+#
+### BEGIN INIT INFO
+# Provides:	http_pid
+# Required-Start:	$remote_fs $syslog
+# Required-Stop:	$remote_fs $syslog
+# Should-Start:	vsftpd ssh
+# Should-Stop:	vsftpd ssh
+# Default-Start:	3 4 5
+# Default-Stop:	0 1 2 6
+# Short-Description: Nethogs Deamon
+### END INIT INFO
+
+debian=0
+# Source function library.
+if [ -f /etc/init.d/functions ] ; then
+    . /etc/init.d/functions
+elif [ -f /etc/rc.d/init.d/functions ] ; then
+    . /etc/rc.d/init.d/functions
+elif [ -f /lib/lsb/init-functions ] ; then
+    . /lib/lsb/init-functions
+    debian=1
+else
+    exit 1
+fi
+
+if [ $debian -eq 0 ]; then
+  lockfile=/var/lock/subsys/inotify_file_d
+else
+  lockfile=/var/lock/inotify_file_d
+  LANG=en_US.UTF-8
+  export LANG
+fi
+
+# Avoid using root's TMPDIR
+unset TMPDIR
+
+pidfilename=inotify_file_d
+pidfile=/var/run/${pidfilename}.pid
+
+
+# server.conf using
+# option=deamon -> /etc/http_pid/server.conf
+# option=""  -> /home/${myid}/workspace-raspi/net/server.conf
+#option=deamon
+option=""
+
+
+LOG_F=/var/log/inotify_file_d.log
+#LOG_F=./x
+WATCH_F=/var/log/vsftpd.log
+
+cmdline="./inotify_file $WATCH_F &> $LOG_F"
+cmd_chk="./inotify_file $WATCH_F"
+
+
+RETVAL=0
+
+start() {
+    KIND="inotify_file_d"
+    echo -n $"Starting $KIND services: "
+    (daemon --pidfile=${pidfile} "$cmdline &")
+    RETVAL=$?
+    # pid
+    pgrep -f "$cmd_chk" > $pidfile
+    echo
+    [ $RETVAL -eq 0 ] && touch $lockfile || RETVAL=1
+    return $RETVAL
+} 
+
+stop() {
+    KIND="inotify_file_d"
+    echo -n $"Shutting down $KIND services: "
+    killproc -p $pidfile $pidfilename
+    RETVAL=$?
+    [ $RETVAL -eq 0 ] && rm -f $lockfile
+    echo
+    return $RETVAL
+} 
+
+restart() {
+    stop
+    start
+}
+
+check_proc() {
+    echo "check_proc()"
+    echo "cmdline=$cmdline"
+    echo "cmd_chk=$cmd_chk"
+    #pgrep -f "$cmd_chk" > $pidfile
+    echo -n "active pid="
+    pgrep -f "$cmd_chk"
+    echo -n "$pidfile="
+    cat $pidfile
+}
+
+case "$1" in
+  start)
+        start
+        ;;
+  stop)
+        stop
+        ;;
+  restart)
+        restart
+        ;;
+  check)
+        check_proc
+        ;;
+  *)
+        echo $"Usage: $0 {start|stop|restart|check}"
+        exit 2
+esac
+
+exit $?
